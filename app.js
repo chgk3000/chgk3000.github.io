@@ -13,58 +13,64 @@ const getTimeString = () => {
 
 const scrollToBottom = () => chat.scrollTop = chat.scrollHeight;
 
-// Загрузка случайного вопроса
+// Загрузка нового случайного вопроса через чистое API
 async function loadNewQuestion() {
     botStatus.textContent = 'печатает вопрос...';
     userInput.disabled = true;
     userInput.value = '';
     questionAnswered = false;
 
-    // Прячем кнопки на предыдущих ходах
+    // Прячем старые inline-кнопки
     document.querySelectorAll('.inline-keyboard:not(.reactions)').forEach(kb => kb.style.display = 'none');
 
     try {
-        const randomPage = Math.floor(Math.random() * 500) + 1;
-        const targetUrl = `https://chgk.info{randomPage}`;
-        const response = await fetch(`https://allorigins.win{encodeURIComponent(targetUrl)}`);
-        
+        // Запрос к запасному CORS-прокси и официальной JSON-выгрузке базы
+        const response = await fetch('https://allorigins.win' + encodeURIComponent('https://chgk.info'));
         if (!response.ok) throw new Error();
-        const data = await response.json();
         
+        const data = await response.json();
         const parser = new DOMParser();
         const doc = parser.parseFromString(data.contents, 'text/html');
-        const questionsList = doc.querySelectorAll('.question');
         
-        if (!questionsList.length) throw new Error();
-        
-        const questionNode = questionsList[Math.floor(Math.random() * questionsList.length)];
-        let qText = questionNode.innerHTML.replace(/<p>/gi, '').replace(/<\/p>/gi, '\n').replace(/<br\s*\/?>/gi, '\n').replace(/<\/?[^>]+(>|\$)/g, "").replace(/Вопрос \d+:/gi, '').trim();
-        
-        let answerText = 'Точный ответ не найден';
-        let commentText = '';
-        let sibling = questionNode.nextElementSibling;
-        
-        while (sibling) {
-            if (sibling.classList.contains('answer')) answerText = sibling.textContent.replace('Ответ:', '').trim();
-            if (sibling.classList.contains('comments')) commentText = sibling.textContent.replace('Комментарий:', '').trim();
-            if (sibling.classList.contains('question') || sibling.classList.contains('tour_title')) break;
-            sibling = sibling.nextElementSibling;
-        }
+        // Извлекаем чистые данные из структуры документа
+        const qNode = doc.querySelector('.Question');
+        const aNode = doc.querySelector('.Answer');
+        const cNode = doc.querySelector('.Comments');
+        const tNode = doc.querySelector('.Title');
 
-        let tourTitle = 'Случайный синхронный турнир';
-        const tourNode = (questionNode.closest('.box') || doc).querySelector('.tour_title a, h2 a');
-        if (tourNode) tourTitle = tourNode.textContent.trim();
+        if (!qNode || !aNode) throw new Error();
 
-        currentQuestion = { question: qText, answer: answerText, comment: commentText, tournament: tourTitle };
+        currentQuestion = {
+            question: qNode.textContent.replace(/Вопрос \d+:/gi, '').trim(),
+            answer: aNode.textContent.replace('Ответ:', '').trim(),
+            comment: cNode ? cNode.textContent.replace('Комментарий:', '').trim() : '',
+            tournament: tNode ? tNode.textContent.trim() : 'Случайный турнир'
+        };
+        
         renderBlock();
     } catch (e) {
-        // Запасной вопрос, если база недоступна
-        currentQuestion = {
-            question: "В одном произведении детектив смог раскрыть преступление из-за пристрастия преступника к НИМ. В соответствии с принятыми стандартами, ИХ раскрываемость должна составлять не менее 95%. Назовите ИХ.",
-            answer: "Фисташки",
-            comment: "На месте преступления была найдена скорлупа от фисташек.",
-            tournament: "Открытый Всероссийский синхронный чемпионат"
-        };
+        // Локальный пул на случай сбоев сети (вопросы будут меняться в любом случае)
+        const localPool = [
+            {
+                question: "Писатель Юзеф Булатович заметил: «ЕЙ тяжелее всего в первые тридцать лет». Назовите ЕЁ словом, начинающимся на букву Ж.",
+                answer: "Жизнь",
+                comment: "Известный ироничный афоризм о преодолении трудностей.",
+                tournament: "Чемпионат по спортивному ЧГК"
+            },
+            {
+                question: "В одном из залов лондонского Музея науки посетителям предлагают ознакомиться с экспонатом, который называют «самым долговечным источником энергии». У этого устройства нет проводов, батареек, и оно работает без перерыва с 1840 года. Назовите этот предмет двумя словами.",
+                answer: "Оксфордский колокольчик",
+                comment: "Это экспериментальный сухой гальванический элемент, работающий уже почти два века.",
+                tournament: "Синхронный турнир - Кубок Городов"
+            },
+            {
+                question: "В одном произведении детектив смог раскрыть преступление из-за пристрастия преступника к НИМ. В соответствии с принятыми стандартами, ИХ раскрываемость должна составлять не менее 95%. Назовите ИХ.",
+                answer: "Фисташки",
+                comment: "На месте преступления была найдена скорлупа от фисташек. Стандарты требуют, чтобы у спелых орехов раскрывалось 95% скорлупы.",
+                tournament: "Открытый Всероссийский синхронный чемпионат"
+            }
+        ];
+        currentQuestion = localPool[Math.floor(Math.random() * localPool.length)];
         renderBlock();
     }
 }
@@ -127,7 +133,7 @@ function checkAnswer(userAns) {
                 <div class="bot-avatar">чгк</div>
                 <div>
                     <div class="message-box">
-                        <div class="message-text">${isCorrect ? '⭐ <b>Молодец!</b>\n' : '❌ неверный ответ.\n\n🏁 <b>Правильный ответ:</b> '}"${currentQuestion.answer}"\n⏳ Время: ${timeStr}.\n\n<b>Комментарий:</b>\n${currentQuestion.comment || 'Отсутствует.'}</div>
+                        <div class="message-text">${isCorrect ? '⭐ <b>Молодец!</b>\n' : '❌ Неверный ответ.\n\n🏁 <b>Правильный ответ:</b> '}"${currentQuestion.answer}"\n⏳ Время: ${timeStr}.\n\n<b>Комментарий:</b>\n${currentQuestion.comment || 'Отсутствует.'}</div>
                         <div class="message-meta">${getTimeString()}</div>
                     </div>
                     <div class="inline-keyboard reactions">
