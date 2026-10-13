@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ЧГК Бот — Игра онлайн</title>
+    <style>
+        :root {
+            --tg-bg: #0e1621;
+            --tg-chat-bg: #17212b;
+            --tg-msg-in: #182533;
+            --tg-text: #f5f5f5;
+            --tg-text-muted: #708499;
+            --tg-button: #2481cc;
+            --tg-button-hover: #2a8ece;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--tg-bg);
+            color: var(--tg-text);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .chat-container {
+            width: 100%;
+            max-width: 540px;
+            height: 100vh;
+            background-color: var(--tg-chat-bg);
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
+
+        /* Шапка в стиле ТГ */
+        .chat-header {
+            background-color: var(--tg-msg-in);
+            padding: 10px 15px;
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+        }
+
+        .avatar {
+            width: 42px;
+            height: 42px;
+            background: linear-gradient(135deg, #3a7bd5, #3a6073);
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+            font-size: 16px;
+            margin-right: 12px;
+        }
+
+        .bot-info h3 {
+            margin: 0;
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .bot-info span {
+            font-size: 13px;
+            color: var(--tg-text-muted);
+        }
+
+        /* Область сообщений */
+        .chat-messages {
+            flex: 1;
+            padding: 20px 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .message {
+            max-width: 85%;
+            background-color: var(--tg-msg-in);
+            padding: 10px 14px;
+            border-radius: 12px 12px 12px 4px;
+            align-self: flex-start;
+            position: relative;
+            line-height: 1.4;
+            font-size: 15px;
+            word-wrap: break-word;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: var(--tg-text-muted);
+            text-align: right;
+            margin-top: 4px;
+            display: block;
+        }
+
+        /* Скрытый по умолчанию блок ответа */
+        .answer-block {
+            display: none;
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px dashed rgba(255,255,255,0.1);
+        }
+
+        .answer-title {
+            color: #4cd964;
+            font-weight: bold;
+        }
+
+        .source-title {
+            color: var(--tg-text-muted);
+            font-size: 13px;
+            margin-top: 4px;
+        }
+
+        /* Инлайн-кнопки под сообщением */
+        .inline-buttons {
+            display: flex;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .btn {
+            background-color: rgba(36, 129, 204, 0.15);
+            color: #52a2ff;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background 0.2s;
+            flex: 1;
+            text-align: center;
+        }
+
+        .btn:hover {
+            background-color: rgba(36, 129, 204, 0.3);
+        }
+
+        /* Нижнее меню команд */
+        .chat-input-area {
+            background-color: var(--tg-msg-in);
+            padding: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .menu-btn {
+            background-color: var(--tg-button);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            width: 100%;
+            text-align: center;
+        }
+
+        .menu-btn:hover {
+            background-color: var(--tg-button-hover);
+        }
+    </style>
+</head>
+<body>
+
+<div class="chat-container">
+    <!-- Шапка канала/бота -->
+    <div class="chat-header">
+        <div class="avatar">ЧГК</div>
+        <div class="bot-info">
+            <h3>Что? Где? Когда? Бот</h3>
+            <span>ищет вопрос...</span>
+        </div>
+    </div>
+
+    <!-- Игровое поле -->
+    <div class="chat-messages" id="chatMessages">
+        
+        <!-- Сообщение с вопросом -->
+        <div class="message">
+            <b>Вопрос 1:</b><br><br>
+            Внимание, вопрос! В одном из залов лондонского Музея науки посетителям предлагают ознакомиться с экспонатом, который называют «самым долговечным источником энергии». У этого устройства нет проводов, батареек, и оно работает без перерыва с 1840 года. <br><br>
+            Назовите этот предмет двумя словами.
+            
+            <!-- Скрытый блок ответа -->
+            <div class="answer-block" id="answer1">
+                <span class="answer-title">Ответ:</span> Оксфордский колокольчик.<br>
+                <div class="source-title"><i>Источник: База ЧГК (db.chgk.info)</i></div>
+            </div>
+
+            <!-- Кнопка под вопросом -->
+            <div class="inline-buttons">
+                <button class="btn" id="showBtn" onclick="revealAnswer()">Показать ответ</button>
+            </div>
+            
+            <span class="message-time">22:00</span>
+        </div>
+
+    </div>
+
+    <!-- Нижняя панель действий -->
+    <div class="chat-input-area">
+        <button class="menu-btn" onclick="nextQuestion()">🎲 Следующий вопрос</button>
+    </div>
+</div>
+
+<script>
+    function revealAnswer() {
+        // Показываем блок с ответом
+        document.getElementById('answer1').style.display = 'block';
+        // Прячем кнопку "Показать ответ"
+        document.getElementById('showBtn').style.display = 'none';
+        
+        // Прокрутка вниз к ответу
+        const chat = document.getElementById('chatMessages');
+        chat.scrollTop = chat.scrollHeight;
+    }
+
+    function nextQuestion() {
+        alert("Здесь вы можете настроить загрузку нового вопроса через JavaScript!");
+    }
+</script>
+
+</body>
+</html>
