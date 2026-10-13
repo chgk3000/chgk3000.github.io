@@ -37,7 +37,6 @@
             box-shadow: 0 0 20px rgba(0,0,0,0.5);
         }
 
-        /* Шапка */
         .chat-header {
             background-color: var(--tg-msg-in);
             padding: 10px 15px;
@@ -72,7 +71,6 @@
             color: var(--tg-text-muted);
         }
 
-        /* Окно сообщений */
         .chat-messages {
             flex: 1;
             padding: 15px;
@@ -80,14 +78,13 @@
             display: flex;
             flex-direction: column;
             gap: 14px;
-            background-color: var(--tg-chat-bg);
         }
 
-        /* Стили разметки сообщений */
         .message-row {
             display: flex;
             align-items: flex-start;
             max-width: 85%;
+            animation: fadeIn 0.3s ease;
         }
 
         .message-row.out {
@@ -122,7 +119,6 @@
 
         .message-row.out .message-box {
             background-color: var(--tg-msg-out);
-            border-radius: 12px;
         }
 
         .message-text {
@@ -144,53 +140,42 @@
             color: #a3c2e0;
         }
 
-        /* Инлайн-кнопки как в ТГ */
         .inline-keyboard {
             display: grid;
-            grid-template-columns: repeat(2, 150px);
+            grid-template-columns: repeat(2, 120px);
             gap: 6px;
             margin-top: 10px;
         }
 
         .inline-keyboard.reactions {
-            grid-template-columns: repeat(2, 72px);
-        }
-
-        .inline-keyboard.full-width {
-            grid-template-columns: 306px;
+            grid-template-columns: repeat(2, 60px);
         }
 
         .tg-btn {
             background-color: var(--tg-button-bg);
             color: var(--tg-button-text);
             border: none;
-            padding: 9px 12px;
+            padding: 8px 10px;
             border-radius: 6px;
-            font-size: 14px;
+            font-size: 13.5px;
             font-weight: 500;
             cursor: pointer;
             text-align: center;
             transition: background 0.15s;
-            text-decoration: none;
-            display: flex;
-            justify-content: center;
-            align-items: center;
         }
 
         .tg-btn:hover {
             background-color: #263442;
         }
 
-        /* Ссылки на турниры */
         .tournament-link {
             color: var(--tg-link);
             text-decoration: none;
-            font-size: 13.5px;
+            font-size: 13px;
             display: block;
-            margin-top: 10px;
+            margin-top: 8px;
         }
 
-        /* Нижнее меню */
         .chat-input-bar {
             background-color: var(--tg-msg-in);
             padding: 10px 12px;
@@ -211,132 +196,64 @@
             cursor: pointer;
         }
 
-        .input-mock {
-            font-size: 14.5px;
-            color: var(--tg-text-muted);
+        .input-wrapper {
             flex: 1;
+            display: flex;
+            align-items: center;
+            background: transparent;
         }
 
-        /* Иконка скрепки */
+        .input-field {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: var(--tg-text);
+            font-size: 14.5px;
+            outline: none;
+        }
+
+        .input-field::placeholder {
+            color: var(--tg-text-muted);
+        }
+
         .clip-icon {
             color: var(--tg-text-muted);
             font-size: 20px;
             cursor: pointer;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
 <body>
 
 <div class="chat-container">
-    <!-- Шапка канала/бота -->
     <div class="chat-header">
         <div class="avatar-header">чгк</div>
         <div class="bot-info">
             <h3>чгк</h3>
-            <span>bot</span>
+            <span id="botStatus">bot</span>
         </div>
     </div>
 
-    <!-- Область чата -->
     <div class="chat-messages" id="chatContainer">
-        
-        <!-- Вопрос 1 -->
-        <div class="message-row">
-            <div class="bot-avatar">чгк</div>
-            <div>
-                <div class="message-box">
-                    <div class="message-text">❓ <b>Внимание, вопрос!</b>
-В одном произведении детектив смог раскрыть преступление из-за пристрастия преступника к НИМ. В соответствии с принятыми стандартами, ИХ раскрываемость должна составлять не менее 95%. Назовите ИХ.</div>
-                    <a href="https://chgk.info" target="_blank" class="tournament-link">Открытый Всероссийский синхронный чемпионат - 2011/12 / Этап 3 / Вопрос 1</a>
-                    <div class="message-meta">17:44</div>
-                </div>
-                <div class="inline-keyboard">
-                    <button class="tg-btn" onclick="showWrongAnswer()">Ответ</button>
-                    <button class="tg-btn" onclick="showWrongAnswer()">Дальше</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Динамический контент будет добавляться сюда -->
-
+        <!-- Сюда динамически загружаются вопросы -->
     </div>
 
-    <!-- Нижняя панель как в ТГ -->
     <div class="chat-input-bar">
-        <button class="menu-pill">Menu</button>
+        <button class="menu-pill" onclick="loadNewQuestion()">🎲</button>
         <div class="clip-icon">📎</div>
-        <div class="input-mock">Write a message...</div>
+        <div class="input-wrapper">
+            <input type="text" id="userInput" class="input-field" placeholder="Write a message..." onkeydown="if(event.key === 'Enter') sendUserMessage()" disabled>
+        </div>
     </div>
 </div>
 
-<script>
-    const chat = document.getElementById('chatContainer');
-    let step = 0;
+<!-- Подключаем логику, которая идет во второй части инструкции -->
+<script src="app.js"></script>
 
-    function scrollToBottom() {
-        chat.scrollTop = chat.scrollHeight;
-    }
-
-    function showWrongAnswer() {
-        if (step !== 0) return;
-        step = 1;
-
-        // 1. Сообщение от пользователя "Конфеты"
-        chat.innerHTML += `
-            <div class="message-row out">
-                <div class="message-box">
-                    <div class="message-text">Конфеты</div>
-                    <div class="message-meta out-meta">17:45 ✔️</div>
-                </div>
-            </div>
-        `;
-        scrollToBottom();
-
-        // 2. Ответ бота "Конфеты - это неверный ответ"
-        setTimeout(() => {
-            chat.innerHTML += `
-                <div class="message-row">
-                    <div class="bot-avatar">чгк</div>
-                    <div class="message-box">
-                        <div class="message-text">"Конфеты" - это неверный ответ.</div>
-                        <div class="message-meta">17:45</div>
-                    </div>
-                </div>
-            `;
-            scrollToBottom();
-            showRightAnswerAction();
-        }, 800);
-    }
-
-    function showRightAnswerAction() {
-        // 3. Сообщение от пользователя "Фисташки"
-        setTimeout(() => {
-            chat.innerHTML += `
-                <div class="message-row out">
-                    <div class="message-box">
-                        <div class="message-text">Фисташки</div>
-                        <div class="message-meta out-meta">17:46 ✔️</div>
-                    </div>
-                </div>
-            `;
-            scrollToBottom();
-            showBotSuccess();
-        }, 1500);
-    }
-
-    function showBotSuccess() {
-        // 4. Большой блок успеха от бота
-        setTimeout(() => {
-            chat.innerHTML += `
-                <div class="message-row">
-                    <div class="bot-avatar">чгк</div>
-                    <div>
-                        <div class="message-box">
-                            <div class="message-text">⭐ <b>Молодец, Павел!</b>
-"Фисташки" - это абсолютно верный ответ.
-⏳ Время, потраченное на вопрос: 1 мин. 44 с.
-
-<b>Комментарий:</b>
-На месте преступления была найдена скорлупа от фисташек. Редакторы надеются, что вы "расщелкаете" немало вопросов. Приятного аппетита! :-)</div>
-                            <div class="message-meta">17:46</div>
-                        </div>
+</body>
+</html>
