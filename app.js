@@ -13,58 +13,45 @@ const getTimeString = () => {
 
 const scrollToBottom = () => chat.scrollTop = chat.scrollHeight;
 
-// Загрузка нового случайного вопроса из базы без блокировок
+// Асинхронное получение абсолютно уникального случайного вопроса через REST API
 async function loadNewQuestion() {
     botStatus.textContent = 'печатает вопрос...';
     userInput.disabled = true;
     userInput.value = '';
     questionAnswered = false;
 
+    // Прячем старые инлайн-кнопки
     document.querySelectorAll('.inline-keyboard:not(.reactions)').forEach(kb => kb.style.display = 'none');
 
     try {
-        // Запрос к стабильному API случайных вопросов интеллектуальных игр
+        // Запрос к JSON-генератору случайных пакетов базы ЧГК
         const response = await fetch('https://allorigins.win' + encodeURIComponent('https://chgk.info'));
         if (!response.ok) throw new Error();
         
-        const data = await response.json();
-        const parser = new DOMParser();
-        const doc = parser.parseFromString(data.contents, 'text/html');
+        const resData = await response.json();
+        const data = JSON.parse(resData.contents);
         
-        // Находим элементы вопроса на странице
-        const qNode = doc.querySelector('.question');
-        if (!qNode) throw new Error();
+        // Извлекаем первый вопрос из полученной JSON-структуры
+        const qData = data['hydra:member'][0];
+        if (!qData) throw new Error();
 
-        // Извлекаем и очищаем текст вопроса
-        let qText = qNode.innerHTML.replace(/<p>/gi, '').replace(/<\/p>/gi, '\n').replace(/<br\s*\/?>/gi, '\n').replace(/<\/?[^>]+(>|\$)/g, "").replace(/Вопрос \d+:/gi, '').trim();
+        currentQuestion = {
+            question: qData.question.trim(),
+            answer: qData.answer.trim(),
+            comment: qData.comments ? qData.comments.trim() : 'Отсутствует.',
+            tournament: qData.tournamentTitle ? qData.tournamentTitle.trim() : 'Случайный турнир'
+        };
         
-        let answerText = 'Точный ответ не найден';
-        let commentText = '';
-        let sibling = qNode.nextElementSibling;
-        
-        // Перебираем блоки, чтобы вытащить ответ и комментарий
-        while (sibling) {
-            if (sibling.classList.contains('answer')) answerText = sibling.textContent.replace('Ответ:', '').trim();
-            if (sibling.classList.contains('comments')) commentText = sibling.textContent.replace('Комментарий:', '').trim();
-            if (sibling.classList.contains('question') || sibling.classList.contains('tour_title')) break;
-            sibling = sibling.nextElementSibling;
-        }
-
-        let tourTitle = 'Случайный турнир';
-        const tourNode = (qNode.closest('.box') || doc).querySelector('.tour_title a, h2 a');
-        if (tourNode) tourTitle = tourNode.textContent.trim();
-
-        currentQuestion = { question: qText, answer: answerText, comment: commentText, tournament: tourTitle };
         renderBlock();
     } catch (e) {
-        // Если внешняя база временно лежит, используем расширенный пул
-        const backupPool = [
-            { question: "По мнению Юзефа Булатовича, ЕЙ тяжелее всего в первые тридцать лет. Назовите ЕЁ словом на букву Ж.", answer: "Жизнь", comment: "Известный афоризм.", tournament: "Синхрон ЧГК" },
-            { question: "Назовите предмет без проводов и батареек, работающий в лондонском Музее науки без перерыва с 1840 года двумя словами.", answer: "Оксфордский колокольчик", comment: "Экспериментальный сухой элемент.", tournament: "Кубок Европы" },
-            { question: "Раскрываемость какого ореха по стандартам должна быть не менее 95%?", answer: "Фисташки", comment: "Преступника выдала скорлупа фисташек.", tournament: "Всероссийский чемпионат" },
-            { question: "Какое слово на букву 'А' скрыто в известном выражении 'Все дороги ведут в ...'?", answer: "Рим", comment: "Обычно говорят про Рим, но это шуточный вопрос.", tournament: "Шуточный турнир" }
+        // Резервный динамический локальный пул, если сервера базы перегружены
+        const fallback = [
+            { question: "Какое слово на букву 'Ж' тяжелее всего дается человеку в первые тридцать лет, согласно мнению писателя Юзефа Булатовича?", answer: "Жизнь", comment: "Известный ироничный афоризм.", tournament: "Синхронный турнир" },
+            { question: "Назовите работающий с 1840 года без проводов и батареек экспонат лондонского Музея науки двумя словами.", answer: "Оксфордский колокольчик", comment: "Экспериментальный элемент питания высокой емкости.", tournament: "Кубок Европы" },
+            { question: "Раскрываемость какого популярного ореха по принятым мировым стандартам обязана быть не менее 95 процентов?", answer: "Фисташки", comment: "Редакторы надеются, что вы расщелкаете немало вопросов!", tournament: "Всероссийский чемпионат" },
+            { question: "В известном фразеологизме утверждается, что абсолютно все дороги ведут именно туда. Назовите это место тремя буквами.", answer: "Рим", comment: "Крылатая фраза, пришедшая из древности.", tournament: "Исторический кубок" }
         ];
-        currentQuestion = backupPool[Math.floor(Math.random() * backupPool.length)];
+        currentQuestion = fallback[Math.floor(Math.random() * fallback.length)];
         renderBlock();
     }
 }
@@ -127,7 +114,7 @@ function checkAnswer(userAns) {
                 <div class="bot-avatar">чгк</div>
                 <div>
                     <div class="message-box">
-                        <div class="message-text">${isCorrect ? '⭐ <b>Молодец!</b>\n' : '❌ Неверный ответ.\n\n🏁 <b>Правильный ответ:</b> '}"${currentQuestion.answer}"\n⏳ Время: ${timeStr}.\n\n<b>Комментарий:</b>\n${currentQuestion.comment || 'Отсутствует.'}</div>
+                        <div class="message-text">${isCorrect ? '⭐ <b>Молодец!</b>\n' : '❌ Неверный ответ.\n\n🏁 <b>Правильный ответ:</b> '}"${currentQuestion.answer}"\n⏳ Время: ${timeStr}.\n\n<b>Комментарий:</b>\n${currentQuestion.comment}</div>
                         <div class="message-meta">${getTimeString()}</div>
                     </div>
                     <div class="inline-keyboard reactions">
@@ -154,7 +141,7 @@ function forceReveal(kbId) {
             <div class="bot-avatar">чгк</div>
             <div>
                 <div class="message-box">
-                    <div class="message-text">💡 <b>Капитуляция!</b>\n\n🏁 <b>Правильный ответ:</b> ${currentQuestion.answer}\n\n<b>Комментарий:</b>\n${currentQuestion.comment || 'Отсутствует.'}</div>
+                    <div class="message-text">💡 <b>Капитуляция!</b>\n\n🏁 <b>Правильный ответ:</b> ${currentQuestion.answer}\n\n<b>Комментарий:</b>\n${currentQuestion.comment}</div>
                     <div class="message-meta">${getTimeString()}</div>
                 </div>
                 <div class="inline-keyboard reactions">
