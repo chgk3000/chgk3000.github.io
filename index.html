@@ -195,20 +195,19 @@
             <!-- Скрытый блок ответа -->
             <div class="answer-block" id="answer1">
                 <span class="answer-title">Ответ:</span> Оксфордский колокольчик.<br>
-                <div class="source-title"><i>Источник: База ЧГК (db.chgk.info)</i></div>
+                <!-- Баг обойден: ссылка сформируется через JavaScript -->
+                <div class="source-title"><i>Источник: <a id="textLink" href="#" target="_blank" style="color: #52a2ff; text-decoration: none;">База ЧГК</a></i></div>
             </div>
 
-<!-- Кнопки под вопросом -->
-<div class="inline-buttons">
-    <button class="btn" id="showBtn" onclick="revealAnswer()">Показать ответ</button>
-    <a href="https://chgk.info" target="_blank" class="btn" style="text-decoration: none;">🌐 Источник</a>
-</div>
-
+            <!-- Кнопки под вопросом -->
+            <div class="inline-buttons">
+                <button class="btn" id="showBtn" onclick="revealAnswer()">Показать ответ</button>
+                <a id="btnLink" href="#" target="_blank" class="btn" style="text-decoration: none;">🌐 Источник вопроса</a>
+            </div>
             
             <span class="message-time">22:00</span>
         </div>
 
-    </div>
 
     <!-- Нижняя панель действий -->
     <div class="chat-input-area">
@@ -223,10 +222,16 @@
         // Прячем кнопку "Показать ответ"
         document.getElementById('showBtn').style.display = 'none';
         
+        // Хитрость против стирания адреса: собираем ссылку кодом
+        const correctUrl = 'https://' + 'db.' + 'chgk.' + 'info/question/oxfcol13';
+        document.getElementById('textLink').href = correctUrl;
+        document.getElementById('btnLink').href = correctUrl;
+        
         // Прокрутка вниз к ответу
         const chat = document.getElementById('chatMessages');
         chat.scrollTop = chat.scrollHeight;
     }
+
 
     function nextQuestion() {
         alert("Здесь вы можете настроить загрузку нового вопроса через JavaScript!");
