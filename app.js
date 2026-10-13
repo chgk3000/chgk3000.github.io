@@ -15,30 +15,56 @@ function scrollToBottom() {
     chat.scrollTop = chat.scrollHeight;
 }
 
-// Загрузка случайного вопроса
+// Полноценный асинхронный запрос к базе за случайным вопросом
 async function loadNewQuestion() {
     botStatus.textContent = 'печатает вопрос...';
     userInput.disabled = true;
     userInput.value = '';
     questionAnswered = false;
 
+    // Скрываем старые inline-кнопки предыдущего вопроса, если они были
+    const activeKeyboards = document.querySelectorAll('.inline-keyboard:not(.reactions)');
+    activeKeyboards.forEach(kb => kb.style.display = 'none');
+
     try {
-        // Запрос к API случайных вопросов (обход CORS ограничений через прокси)
-        const response = await fetch('https://allorigins.win' + encodeURIComponent('https://chgk.info'));
+        // Запрос к проверенному публичному API случайных вопросов интеллектуальных игр
+        const randomPage = Math.floor(Math.random() * 500) + 1;
+        const response = await fetch(`https://api.allorigins.win/get?url=${encodeURIComponent('https://chgk.info' + randomPage)}`);
+        
+        if (!response.ok) throw new Error('Ошибка сети');
         const data = await response.json();
         
         const parser = new DOMParser();
         const doc = parser.parseFromString(data.contents, 'text/html');
         
-        const questionText = doc.querySelector('.question p') ? doc.querySelector('.question p').textContent.trim() : 'Текст вопроса не найден';
-        const answerText = doc.querySelector('.answer') ? doc.querySelector('.answer').textContent.replace('Ответ:', '').trim() : 'Фисташки';
-        const commentNode = doc.querySelector('.comments');
-        const commentText = commentNode ? commentNode.textContent.replace('Комментарий:', '').trim() : '';
-        const tournamentText = doc.querySelector('.tour_title a') ? doc.querySelector('.tour_title a').textContent.trim() : 'Случайный турнир';
+        // Находим первый попавшийся случайный вопрос в документе базы данных
+        const questionNode = doc.querySelector('.question');
+        
+        if (!questionNode) throw new Error('Вопросы на странице не найдены');
+
+        // Достаем текст вопроса, ответа и название турнира
+        let qText = questionNode.querySelector('p') ? questionNode.querySelector('p').innerHTML : '';
+        qText = qText.replace(/<br\s*\/?>/gi, '\n').replace(/<\/?[^>]+(>|\$)/g, "").trim();
+        
+        let aText = questionNode.nextElementSibling && questionNode.nextElementSibling.classList.contains('answer') 
+            ? questionNode.nextElementSibling.textContent.replace('Ответ:', '').trim() : 'Фисташки';
+            
+        let commentText = '';
+        let sibling = questionNode.nextElementSibling;
+        while(sibling) {
+            if(sibling.classList.contains('comments')) {
+                commentText = sibling.textContent.replace('Комментарий:', '').trim();
+                break;
+            }
+            if(sibling.classList.contains('question')) break;
+            sibling = sibling.nextElementSibling;
+        }
+
+        const tournamentText = doc.querySelector('.tour_title a') ? doc.querySelector('.tour_title a').textContent.trim() : 'Синхронный турнир';
 
         currentQuestion = {
-            question: questionText,
-            answer: answerText,
+            question: qText,
+            answer: aText,
             comment: commentText,
             tournament: tournamentText
         };
@@ -49,7 +75,8 @@ async function loadNewQuestion() {
         userInput.disabled = false;
         userInput.focus();
     } catch (error) {
-        console.error('Ошибка сети, загружаем демо-вопрос:', error);
+        console.error('Ошибка загрузки нового вопроса:', error);
+        // Резервный пул на случай таймаута внешних серверов
         currentQuestion = {
             question: "В одном произведении детектив смог раскрыть преступление из-за пристрастия преступника к НИМ. В соответствии с принятыми стандартами, ИХ раскрываемость должна составлять не менее 95%. Назовите ИХ.",
             answer: "Фисташки",
@@ -112,8 +139,9 @@ function checkUserAnswer(userAns) {
     const seconds = diffSeconds % 60;
     const timeStr = minutes > 0 ? `${minutes} мин. ${seconds} с.` : `${seconds} с.`;
 
-    const clean = str => str.toLowerCase().replace(/[^а-яа-ё0-9]/g, '');
-    const isCorrect = clean(userAns) === clean(currentQuestion.answer) || (userAns.length > 3 && currentQuestion.answer.toLowerCase().includes(userAns.toLowerCase()));
+    const clean = str => str.toLowerCase().replace(/[^а-яа-ё0-9]/g, '').trim();
+    const isCorrect = clean(userAns) === clean(currentQuestion.answer) || 
+                     (userAns.length > 3 && clean(currentQuestion.answer).includes(clean(userAns)));
 
     setTimeout(() => {
         if (isCorrect) {
@@ -150,7 +178,7 @@ function checkUserAnswer(userAns) {
             `;
         }
         scrollToBottom();
-    }, 800);
+    }, 600);
 }
 
 function forceRevealAnswer(kbId) {
@@ -179,5 +207,4 @@ function forceRevealAnswer(kbId) {
     scrollToBottom();
 }
 
-// Первый запуск при старте сайта
 window.onload = loadNewQuestion;
